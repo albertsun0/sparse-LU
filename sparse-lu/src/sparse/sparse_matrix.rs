@@ -5,6 +5,7 @@ pub trait SparseMatrixTrait {
     fn nnz(&self) -> usize;
     fn set(&mut self, i: usize, j: usize, value: f32);
     fn new(rows: usize, cols: usize) -> Self;
+    fn random(rows: usize, cols: usize, density: f32) -> Self;
 }
 
 //TODO: create sparseMatrix class that handles conversion between different sparse matrix formats

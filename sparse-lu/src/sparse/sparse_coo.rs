@@ -1,5 +1,8 @@
 use crate::sparse::sparse_matrix::SparseMatrixTrait;
 use std::collections::HashMap;
+use rand::Rng;
+use std::collections::HashSet;
+
 
 pub struct SparseCOO {
     nrows: usize,
@@ -45,6 +48,36 @@ impl SparseMatrixTrait for SparseCOO {
             rowind: Vec::new(),
             colind: Vec::new(),
             values: Vec::new(),
+        }
+    }
+    fn random(nrows: usize, ncols: usize, density: f32) -> Self {
+        let mut rng = rand::rng();
+        let need = ((nrows * ncols) as f32 * density).floor() as usize;
+
+        // We know capacity - remove dynamic allocation overhead
+        let mut pairs: HashSet<(usize, usize)> = HashSet::with_capacity(need);
+        while pairs.len() < need {
+            let i = rng.random_range(0..nrows);
+            let j = rng.random_range(0..ncols);
+            pairs.insert((i, j));
+        }
+
+        // Convert to vectors and generate corresponding values
+        let coords: Vec<(usize, usize)> = pairs.into_iter().collect();
+        let mut values: Vec<f32> = Vec::with_capacity(need);
+            
+        for _ in 0..need {
+            values.push(rng.random::<f32>());
+        }
+
+        let (rowind, colind): (Vec<usize>, Vec<usize>) = coords.into_iter().unzip();
+
+        Self {
+            nrows,
+            ncols,
+            rowind,
+            colind,
+            values,
         }
     }
 }
@@ -95,32 +128,43 @@ impl SparseCOO {
         }
         dense
     }
+    
     pub fn multiply(&self, other: &Self) -> Self {
         assert_eq!(self.ncols, other.nrows);
-        let mut other_colmap: HashMap<usize, Vec<(usize, f32)>> = HashMap::new();
-
+        let mut other_row_map: HashMap<usize, Vec<(usize, f32)>> = HashMap::new();
         for i in 0..other.nnz() {
-            other_colmap
-                .entry(other.colind[i])
+            other_row_map
+                .entry(other.rowind[i])
                 .or_default()
-                .push((other.rowind[i], other.values[i]));
+                .push((other.colind[i], other.values[i]));
         }
 
-        let mut result = Self::new(self.nrows, other.ncols);
+        let mut result_map: HashMap<(usize, usize), f32> = HashMap::new();
 
         for i in 0..self.nnz() {
             let row = self.rowind[i];
             let col = self.colind[i];
             let value = self.values[i];
-            for (other_row, other_value) in other_colmap.get(&col).unwrap_or(&Vec::new()) {
-                result.set(
-                    row,
-                    *other_row,
-                    result.get(row, *other_row) + value * other_value,
-                );
+            for (other_row, other_value) in other_row_map.get(&col).unwrap_or(&Vec::new()) {
+                let e = result_map.entry((row, *other_row)).or_insert(0.0);
+                *e += value * other_value;
             }
         }
 
-        result
+        Self::from_map(self.nrows, other.ncols, result_map)
+    }
+
+    fn from_map(nrows: usize, ncols: usize, map: HashMap<(usize, usize), f32>) -> Self {
+        let (keys, values): (Vec<(usize, usize)>, Vec<f32>) = map.into_iter().unzip();
+
+        let (rowind, colind)  = keys.into_iter().unzip();
+
+        Self {
+            nrows,
+            ncols,
+            rowind,
+            colind,
+            values,
+        }
     }
 }
