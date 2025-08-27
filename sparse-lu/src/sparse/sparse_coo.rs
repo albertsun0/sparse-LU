@@ -1,8 +1,6 @@
 use crate::sparse::sparse_matrix::SparseMatrixTrait;
-use std::collections::HashMap;
-use rand::Rng;
-use std::collections::HashSet;
-
+use rand::seq::index::sample;
+use std::{collections::HashMap, iter::repeat_with};
 
 pub struct SparseCOO {
     nrows: usize,
@@ -51,26 +49,16 @@ impl SparseMatrixTrait for SparseCOO {
         }
     }
     fn random(nrows: usize, ncols: usize, density: f32) -> Self {
-        let mut rng = rand::rng();
-        let need = ((nrows * ncols) as f32 * density).floor() as usize;
+        let mut rng = fastrand::Rng::new();
+        let mut old_rng = rand::rng();
+        let nnz = ((nrows * ncols) as f32 * density).floor() as usize;
 
-        // We know capacity - remove dynamic allocation overhead
-        let mut pairs: HashSet<(usize, usize)> = HashSet::with_capacity(need);
-        while pairs.len() < need {
-            let i = rng.random_range(0..nrows);
-            let j = rng.random_range(0..ncols);
-            pairs.insert((i, j));
-        }
+        // better way to sample using fastrand?
+        let flat_indices = sample(&mut old_rng, nrows * ncols, nnz);
 
-        // Convert to vectors and generate corresponding values
-        let coords: Vec<(usize, usize)> = pairs.into_iter().collect();
-        let mut values: Vec<f32> = Vec::with_capacity(need);
-            
-        for _ in 0..need {
-            values.push(rng.random::<f32>());
-        }
-
-        let (rowind, colind): (Vec<usize>, Vec<usize>) = coords.into_iter().unzip();
+        let rowind: Vec<_> = flat_indices.iter().map(|x| x % nrows).collect();
+        let colind: Vec<_> = flat_indices.iter().map(|x| x / nrows).collect();
+        let values: Vec<f32> = repeat_with(|| rng.f32()).take(nnz).collect();
 
         Self {
             nrows,
@@ -128,10 +116,12 @@ impl SparseCOO {
         }
         dense
     }
-    
+
     pub fn multiply(&self, other: &Self) -> Self {
         assert_eq!(self.ncols, other.nrows);
+        let target_cols = other.ncols;
         let mut other_row_map: HashMap<usize, Vec<(usize, f32)>> = HashMap::new();
+
         for i in 0..other.nnz() {
             other_row_map
                 .entry(other.rowind[i])
@@ -139,25 +129,27 @@ impl SparseCOO {
                 .push((other.colind[i], other.values[i]));
         }
 
-        let mut result_map: HashMap<(usize, usize), f32> = HashMap::new();
+        let mut result_map: HashMap<usize, f32> = HashMap::new();
 
         for i in 0..self.nnz() {
             let row = self.rowind[i];
             let col = self.colind[i];
             let value = self.values[i];
             for (other_row, other_value) in other_row_map.get(&col).unwrap_or(&Vec::new()) {
-                let e = result_map.entry((row, *other_row)).or_insert(0.0);
+                let e = result_map
+                    .entry(row * target_cols + *other_row)
+                    .or_insert(0.0);
                 *e += value * other_value;
             }
         }
 
-        Self::from_map(self.nrows, other.ncols, result_map)
+        Self::from_flat_map(self.nrows, other.ncols, result_map)
     }
 
-    fn from_map(nrows: usize, ncols: usize, map: HashMap<(usize, usize), f32>) -> Self {
-        let (keys, values): (Vec<(usize, usize)>, Vec<f32>) = map.into_iter().unzip();
-
-        let (rowind, colind)  = keys.into_iter().unzip();
+    fn from_flat_map(nrows: usize, ncols: usize, map: HashMap<usize, f32>) -> Self {
+        let (flat_indexes, values): (Vec<usize>, Vec<f32>) = map.into_iter().unzip();
+        let rowind: Vec<_> = flat_indexes.iter().map(|x| x % nrows).collect();
+        let colind: Vec<_> = flat_indexes.iter().map(|x| x / nrows).collect();
 
         Self {
             nrows,
