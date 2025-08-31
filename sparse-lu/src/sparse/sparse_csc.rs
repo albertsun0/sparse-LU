@@ -170,18 +170,6 @@ impl SparseCSC {
         println!("values: {:?}", self.values);
     }
 
-    pub fn to_dense(&self) -> Vec<Vec<f32>> {
-        let mut dense = vec![vec![0.0; self.ncols]; self.nrows];
-        let mut col = 0;
-        for i in 0..self.nnz() {
-            if i >= self.colptr[col + 1] {
-                col += 1;
-            }
-            dense[self.rowind[i]][col] = self.values[i];
-        }
-        dense
-    }
-
     pub fn num_nnz_in_column(&self, j: usize) -> usize {
         self.colptr[j + 1] - self.colptr[j]
     }

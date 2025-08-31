@@ -1,5 +1,6 @@
 use crate::sparse::{
-    sparse_coo::SparseCOO, sparse_csc::SparseCSC, sparse_matrix::SparseMatrixTrait,
+    sparse_coo::SparseCOO, sparse_csc::SparseCSC, sparse_csr::SparseCSR,
+    sparse_matrix::SparseMatrixTrait,
 };
 
 use crate::tests::test_utils::{dense_random_floats, get_dense_simple};
@@ -101,6 +102,8 @@ fn test_random_generation_coo() {
     test_sparse_random_generation::<SparseCOO>(10, 8, 0.3);
 }
 
+// END COO TESTS --------------------------------------------------------------------------------
+
 #[test]
 fn test_from_to_dense_csc() {
     let dense_simple = get_dense_simple();
@@ -125,4 +128,32 @@ fn test_edge_cases_csc() {
 #[test]
 fn test_random_generation_csc() {
     test_sparse_random_generation::<SparseCSC>(10, 8, 0.3);
+}
+
+// END CSC TESTS --------------------------------------------------------------------------------
+
+#[test]
+fn test_from_to_dense_csr() {
+    let dense_simple = get_dense_simple();
+    test_from_to_dense::<SparseCSR>(dense_simple);
+    let dense_random = dense_random_floats(20, 18);
+    test_from_to_dense::<SparseCSR>(dense_random);
+}
+
+#[test]
+fn test_get_csr() {
+    let dense_simple = get_dense_simple();
+    test_sparse_get::<SparseCSR>(dense_simple);
+    let dense_random = dense_random_floats(20, 18);
+    test_sparse_get::<SparseCSR>(dense_random);
+}
+
+#[test]
+fn test_edge_cases_csr() {
+    test_sparse_edge_cases::<SparseCSR>();
+}
+
+#[test]
+fn test_random_generation_csr() {
+    test_sparse_random_generation::<SparseCSR>(10, 8, 0.3);
 }

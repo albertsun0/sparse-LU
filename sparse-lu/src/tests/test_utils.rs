@@ -31,7 +31,13 @@ pub fn get_dense_simple() -> Vec<Vec<f32>> {
     ]
 }
 
+pub fn get_dense_simple_b() -> Vec<Vec<f32>> {
+    vec![vec![1.0, 0.0], vec![0.0, 1.0], vec![1.0, 1.0]]
+}
+
 pub fn dense_random_floats(rows: usize, cols: usize) -> Vec<Vec<f32>> {
     let mut rng = fastrand::Rng::new();
-    vec![vec![rng.f32(); cols]; rows]
+    (0..rows)
+        .map(|_| (0..cols).map(|_| rng.f32()).collect())
+        .collect()
 }
