@@ -1,13 +1,13 @@
-use crate::sparse::sparse_matrix::SparseMatrixTrait;
+use crate::sparse::{sparse_csc::SparseCSC, sparse_matrix::SparseMatrixTrait};
 use rand::seq::index::sample;
 use std::{collections::HashMap, iter::repeat_with};
 
 pub struct SparseCOO {
-    nrows: usize,
-    ncols: usize,
-    rowind: Vec<usize>, // length = nnz
-    colind: Vec<usize>, // length = nnz
-    values: Vec<f32>,   // length = nnz
+    pub nrows: usize,
+    pub ncols: usize,
+    pub rowind: Vec<usize>, // length = nnz
+    pub colind: Vec<usize>, // length = nnz
+    pub values: Vec<f32>,   // length = nnz
 }
 
 impl SparseMatrixTrait for SparseCOO {
@@ -145,6 +145,14 @@ impl SparseCOO {
 
         Self::from_flat_map(self.nrows, other.ncols, result_map)
     }
+
+    /*
+        1 2 3    a b c    1a + 2d + 3g, 1b + 2e + 3h, 1c + 2f + 3i
+        4 5 6    d e f    4a + 5d + 6g, 4b + 5e + 6h, 4c + 5f + 6i
+        7 8 9    g h i    7a + 8d + 9g, 7b + 8e + 9h, 7c + 8f + 9i
+    
+    
+     */
 
     fn from_flat_map(nrows: usize, ncols: usize, map: HashMap<usize, f32>) -> Self {
         let (flat_indexes, values): (Vec<usize>, Vec<f32>) = map.into_iter().unzip();

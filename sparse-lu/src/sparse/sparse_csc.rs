@@ -15,11 +15,11 @@ use std::collections::HashSet;
 */
 
 pub struct SparseCSC {
-    nrows: usize,
-    ncols: usize,
-    colptr: Vec<usize>, // length = ncols + 1
-    rowind: Vec<usize>, // length = nnz
-    values: Vec<f32>,   // length = nnz
+    pub nrows: usize,
+    pub ncols: usize,
+    pub colptr: Vec<usize>, // length = ncols + 1
+    pub rowind: Vec<usize>, // length = nnz
+    pub values: Vec<f32>,   // length = nnz
 }
 
 impl SparseMatrixTrait for SparseCSC {
@@ -38,17 +38,18 @@ impl SparseMatrixTrait for SparseCSC {
         self.rowind.len()
     }
     fn set(&mut self, i: usize, j: usize, value: f32) {
-        // self.check_bounds(i, j);
-        // let index = self.get_container_index(i, j);
-        // match index {
-        //     Some(index) => self.values[index] = value,
-        //     None => {
-        //         self.rowind.push(i);
-        //         self.colind.push(j);
-        //         self.values.push(value);
-        //     }
-        // }
+        self.check_bounds(i, j);
+        let index = self.get_container_index(i, j);
+        match index {
+            Some(index) => {
+                self.values[index] = value;
+            }
+            None => {
+                println!("inserting new indices not supported: ({}, {})", i, j);
+            }
+        }
     }
+    // this fn is not very useful, since we disallow setting new indices
     fn new(nrows: usize, ncols: usize) -> Self {
         Self {
             nrows,
@@ -109,11 +110,9 @@ impl SparseMatrixTrait for SparseCSC {
 
 impl SparseCSC {
     fn get_container_index(&self, i: usize, j: usize) -> Option<usize> {
-        // do two binary searches
+        // binary search column 
         let start = self.colptr[j];
         let end = self.colptr[j + 1];
-
-        println!("{},{} start: {}, end: {}", i, j, start, end);
 
         match self.rowind[start..end].binary_search(&i) {
             Ok(index) => Some(start + index),
@@ -148,4 +147,15 @@ impl SparseCSC {
         }
         dense
     }
+
+    pub fn num_nnz_in_column(&self, j: usize) -> usize {
+        self.colptr[j + 1] - self.colptr[j]
+    }
+
+    pub fn get_column_range(&self, j: usize) -> (usize, usize) {
+        (self.colptr[j], self.colptr[j + 1])
+    }
+
 }
+
+
