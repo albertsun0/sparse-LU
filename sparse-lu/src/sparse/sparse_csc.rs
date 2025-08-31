@@ -1,7 +1,5 @@
+use crate::sparse::sparse_coo::SparseCOO;
 use crate::sparse::sparse_matrix::SparseMatrixTrait;
-use rand::Rng;
-use rand::seq::index::sample;
-use std::collections::HashMap;
 use std::collections::HashSet;
 
 /*
@@ -68,7 +66,6 @@ impl SparseMatrixTrait for SparseCSC {
 
         while flat_indices.len() < nnz {
             let index = rng.usize(..nrows * ncols);
-
             if flat_indices.insert(index) {
                 x.push(index);
             }
@@ -192,4 +189,81 @@ impl SparseCSC {
     pub fn get_column_range(&self, j: usize) -> (usize, usize) {
         (self.colptr[j], self.colptr[j + 1])
     }
+
+    // TODO: take optional flat_values
+    pub fn from_flat_indices(
+        nrows: usize,
+        ncols: usize,
+        flat_indices: Vec<usize>,
+        flat_values: Vec<f32>,
+    ) -> Self {
+        assert_eq!(flat_indices.len(), flat_values.len());
+
+        let mut flat_pairs = flat_indices
+            .iter()
+            .map(|x| flat_index_to_column_major(*x, nrows, ncols))
+            .zip(flat_values.iter())
+            .collect::<Vec<_>>();
+
+        flat_pairs.sort_unstable_by_key(|pair| pair.0);
+
+        let (sorted_flat_indices, sorted_flat_values): (Vec<usize>, Vec<f32>) =
+            flat_pairs.into_iter().unzip();
+
+        let nnz = sorted_flat_indices.len();
+
+        let mut colptr = vec![0; ncols + 1];
+        colptr[ncols] = nnz;
+        let mut rowind = Vec::with_capacity(nnz);
+
+        let mut current_col: usize = 0;
+
+        for flat_index in sorted_flat_indices {
+            let row = flat_index % nrows;
+            let col = flat_index / nrows;
+            while col > current_col {
+                colptr[current_col + 1] = rowind.len();
+                current_col += 1;
+            }
+            rowind.push(row);
+        }
+
+        while current_col < ncols {
+            colptr[current_col + 1] = rowind.len();
+            current_col += 1;
+        }
+
+        Self {
+            nrows,
+            ncols,
+            colptr,
+            rowind,
+            values: sorted_flat_values,
+        }
+    }
+
+    pub fn to_coo(&self) -> SparseCOO {
+        let mut col = 0;
+        let mut flat_indices = Vec::with_capacity(self.nnz());
+
+        for i in 0..self.nnz() {
+            if i >= self.colptr[col + 1] {
+                col += 1;
+            }
+            flat_indices.push(self.rowind[i] * self.ncols + col);
+        }
+
+        SparseCOO::from_flat_indices(self.nrows, self.ncols, flat_indices, self.values.clone())
+    }
+}
+
+pub fn flat_index_to_column_major(flat_index: usize, nrows: usize, ncols: usize) -> usize {
+    /*
+       turn a row major flat_index = row * ncols + col
+       into column major flat_index = col * nrows + row
+    */
+
+    let row = flat_index / ncols;
+    let col = flat_index % ncols;
+    return col * nrows + row;
 }

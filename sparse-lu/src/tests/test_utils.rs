@@ -22,3 +22,16 @@ pub fn dense_matrix_multiply(a: &Vec<Vec<f32>>, b: &Vec<Vec<f32>>) -> Vec<Vec<f3
 
     result
 }
+
+pub fn get_dense_simple() -> Vec<Vec<f32>> {
+    vec![
+        vec![1.0, 2.0, 0.0],
+        vec![0.0, 3.0, 4.0],
+        vec![5.0, 0.0, 6.0],
+    ]
+}
+
+pub fn dense_random_floats(rows: usize, cols: usize) -> Vec<Vec<f32>> {
+    let mut rng = fastrand::Rng::new();
+    vec![vec![rng.f32(); cols]; rows]
+}

@@ -2,6 +2,8 @@ use crate::sparse::{
     sparse_coo::SparseCOO, sparse_csc::SparseCSC, sparse_matrix::SparseMatrixTrait,
 };
 
+use crate::tests::test_utils::{dense_random_floats, get_dense_simple};
+
 fn test_from_to_dense<T: SparseMatrixTrait>(dense: Vec<Vec<f32>>) {
     let sparse = T::from_dense(dense.clone());
 
@@ -71,19 +73,6 @@ fn test_sparse_random_generation<T: SparseMatrixTrait>(rows: usize, cols: usize,
 
     assert_eq!(sparse_dense.len(), rows);
     assert_eq!(sparse_dense[0].len(), cols);
-}
-
-fn get_dense_simple() -> Vec<Vec<f32>> {
-    vec![
-        vec![1.0, 2.0, 0.0],
-        vec![0.0, 3.0, 4.0],
-        vec![5.0, 0.0, 6.0],
-    ]
-}
-
-fn dense_random_floats(rows: usize, cols: usize) -> Vec<Vec<f32>> {
-    let mut rng = fastrand::Rng::new();
-    vec![vec![rng.f32(); cols]; rows]
 }
 
 #[test]

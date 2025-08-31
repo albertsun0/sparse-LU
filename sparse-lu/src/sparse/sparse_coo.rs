@@ -177,4 +177,32 @@ impl SparseCOO {
             values,
         }
     }
+
+    pub fn from_flat_indices(
+        nrows: usize,
+        ncols: usize,
+        flat_indices: Vec<usize>,
+        values: Vec<f32>,
+    ) -> Self {
+        let rowind: Vec<_> = flat_indices.iter().map(|x| x / ncols).collect();
+        let colind: Vec<_> = flat_indices.iter().map(|x| x % ncols).collect();
+        Self {
+            nrows,
+            ncols,
+            rowind,
+            colind,
+            values,
+        }
+    }
+
+    pub fn to_csc(&self) -> SparseCSC {
+        let flat_indices: Vec<usize> = self
+            .rowind
+            .iter()
+            .zip(self.colind.iter())
+            .map(|(x, y)| x * self.ncols + y)
+            .collect();
+
+        SparseCSC::from_flat_indices(self.nrows, self.ncols, flat_indices, self.values.clone())
+    }
 }
