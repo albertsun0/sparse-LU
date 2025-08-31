@@ -106,11 +106,48 @@ impl SparseMatrixTrait for SparseCSC {
             values,
         }
     }
+    fn from_dense(dense: Vec<Vec<f32>>) -> Self {
+        let nrows = dense.len();
+        let ncols = dense[0].len();
+        let mut colptr = vec![0; ncols + 1];
+        let mut rowind = Vec::new();
+        let mut values = Vec::new();
+
+        for i in 0..ncols {
+            for j in 0..nrows {
+                let value = dense[j][i];
+                if value != 0.0 {
+                    rowind.push(j);
+                    values.push(value);
+                }
+            }
+            colptr[i + 1] = rowind.len();
+        }
+
+        Self {
+            nrows,
+            ncols,
+            colptr,
+            rowind,
+            values,
+        }
+    }
+    fn to_dense(&self) -> Vec<Vec<f32>> {
+        let mut dense = vec![vec![0.0; self.ncols]; self.nrows];
+        let mut col = 0;
+        for i in 0..self.nnz() {
+            if i >= self.colptr[col + 1] {
+                col += 1;
+            }
+            dense[self.rowind[i]][col] = self.values[i];
+        }
+        dense
+    }
 }
 
 impl SparseCSC {
     fn get_container_index(&self, i: usize, j: usize) -> Option<usize> {
-        // binary search column 
+        // binary search column
         let start = self.colptr[j];
         let end = self.colptr[j + 1];
 
@@ -155,7 +192,4 @@ impl SparseCSC {
     pub fn get_column_range(&self, j: usize) -> (usize, usize) {
         (self.colptr[j], self.colptr[j + 1])
     }
-
 }
-
-

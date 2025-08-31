@@ -68,25 +68,7 @@ impl SparseMatrixTrait for SparseCOO {
             values,
         }
     }
-}
-
-impl SparseCOO {
-    fn get_container_index(&self, i: usize, j: usize) -> Option<usize> {
-        self.check_bounds(i, j);
-        self.rowind
-            .iter()
-            .zip(self.colind.iter())
-            .position(|(x, y)| *x == i && *y == j)
-            .map(|x| x)
-    }
-
-    fn check_bounds(&self, i: usize, j: usize) -> bool {
-        if i >= self.nrows || j >= self.ncols {
-            panic!("Index out of bounds: ({}, {})", i, j);
-        }
-        true
-    }
-    pub fn from_dense(dense: Vec<Vec<f32>>) -> Self {
+    fn from_dense(dense: Vec<Vec<f32>>) -> Self {
         let nrows = dense.len();
         let ncols = dense[0].len();
         let mut rowind = Vec::new();
@@ -109,17 +91,47 @@ impl SparseCOO {
             values,
         }
     }
-    pub fn to_dense(&self) -> Vec<Vec<f32>> {
+
+    fn to_dense(&self) -> Vec<Vec<f32>> {
         let mut dense = vec![vec![0.0; self.ncols]; self.nrows];
         for i in 0..self.nnz() {
             dense[self.rowind[i]][self.colind[i]] = self.values[i];
         }
         dense
     }
+}
+
+impl SparseCOO {
+    fn get_container_index(&self, i: usize, j: usize) -> Option<usize> {
+        self.check_bounds(i, j);
+        self.rowind
+            .iter()
+            .zip(self.colind.iter())
+            .position(|(x, y)| *x == i && *y == j)
+            .map(|x| x)
+    }
+
+    fn check_bounds(&self, i: usize, j: usize) -> bool {
+        if i >= self.nrows || j >= self.ncols {
+            panic!("Index out of bounds: ({}, {})", i, j);
+        }
+        true
+    }
+
+    pub fn print(&self) {
+        println!("SparseCOO matrix:");
+        println!("nrows: {}", self.nrows);
+        println!("ncols: {}", self.ncols);
+        println!("rowind: {:?}", self.rowind);
+        println!("colind: {:?}", self.colind);
+        println!("values: {:?}", self.values);
+    }
 
     pub fn multiply(&self, other: &Self) -> Self {
         assert_eq!(self.ncols, other.nrows);
         let target_cols = other.ncols;
+        self.print();
+        other.print();
         let mut other_row_map: HashMap<usize, Vec<(usize, f32)>> = HashMap::new();
 
         for i in 0..other.nnz() {
@@ -143,21 +155,19 @@ impl SparseCOO {
             }
         }
 
+        println!("result_map: {:?}", result_map);
+
         Self::from_flat_map(self.nrows, other.ncols, result_map)
     }
 
-    /*
-        1 2 3    a b c    1a + 2d + 3g, 1b + 2e + 3h, 1c + 2f + 3i
-        4 5 6    d e f    4a + 5d + 6g, 4b + 5e + 6h, 4c + 5f + 6i
-        7 8 9    g h i    7a + 8d + 9g, 7b + 8e + 9h, 7c + 8f + 9i
-    
-    
-     */
-
     fn from_flat_map(nrows: usize, ncols: usize, map: HashMap<usize, f32>) -> Self {
         let (flat_indexes, values): (Vec<usize>, Vec<f32>) = map.into_iter().unzip();
-        let rowind: Vec<_> = flat_indexes.iter().map(|x| x % nrows).collect();
-        let colind: Vec<_> = flat_indexes.iter().map(|x| x / nrows).collect();
+        let rowind: Vec<_> = flat_indexes.iter().map(|x| x / ncols).collect();
+        let colind: Vec<_> = flat_indexes.iter().map(|x| x % ncols).collect();
+
+        println!("rowind: {:?}", rowind);
+        println!("colind: {:?}", colind);
+        println!("values: {:?}", values);
 
         Self {
             nrows,
