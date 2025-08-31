@@ -130,8 +130,8 @@ impl SparseCOO {
     pub fn multiply(&self, other: &Self) -> Self {
         assert_eq!(self.ncols, other.nrows);
         let target_cols = other.ncols;
-        self.print();
-        other.print();
+        // self.print();
+        // other.print();
         let mut other_row_map: HashMap<usize, Vec<(usize, f32)>> = HashMap::new();
 
         for i in 0..other.nnz() {
@@ -155,7 +155,7 @@ impl SparseCOO {
             }
         }
 
-        println!("result_map: {:?}", result_map);
+        // println!("result_map: {:?}", result_map);
 
         Self::from_flat_map(self.nrows, other.ncols, result_map)
     }
@@ -165,9 +165,9 @@ impl SparseCOO {
         let rowind: Vec<_> = flat_indexes.iter().map(|x| x / ncols).collect();
         let colind: Vec<_> = flat_indexes.iter().map(|x| x % ncols).collect();
 
-        println!("rowind: {:?}", rowind);
-        println!("colind: {:?}", colind);
-        println!("values: {:?}", values);
+        // println!("rowind: {:?}", rowind);
+        // println!("colind: {:?}", colind);
+        // println!("values: {:?}", values);
 
         Self {
             nrows,

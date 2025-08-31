@@ -243,6 +243,16 @@ impl SparseCSC {
 
         SparseCOO::from_flat_indices(self.nrows, self.ncols, flat_indices, self.values.clone())
     }
+
+    pub fn nonzero_columns(&self) -> Vec<usize> {
+        let mut nonzero_columns = Vec::new();
+        for i in 0..self.ncols {
+            if self.num_nnz_in_column(i) > 0 {
+                nonzero_columns.push(i);
+            }
+        }
+        nonzero_columns
+    }
 }
 
 pub fn flat_index_to_column_major(flat_index: usize, nrows: usize, ncols: usize) -> usize {

@@ -12,7 +12,7 @@ use std::collections::HashSet;
 
     to get number of nonzeros in row i, use rowptr[i+1] - rowptr[i]
 
-    NOTE: not needed for LU, but CSR x CSC is the most efficent multiplication format
+    NOTE: not needed for LU, but CSR x CSR should be the most efficent multiplication format
 */
 
 pub struct SparseCSR {
@@ -253,48 +253,62 @@ impl SparseCSR {
         SparseCOO::from_flat_indices(self.nrows, self.ncols, flat_indices, values)
     }
 
-    pub fn multiply_to_flat_csc(&self, other: &SparseCSC) -> (Vec<usize>, Vec<f32>) {
+    /*
+    
+    a b c      1 2 3   = a1 + b4 + c7, a2 + b5 + c8, a3 + b6 + c9
+    d e f   x  4 5 6   = d1 + e4 + f7, d2 + e5 + f8, d3 + e6 + f9
+    g h i      7 8 9   = g1 + h4 + i7, g2 + h5 + i8, g3 + h6 + i9
+    
+    */
+
+    pub fn multiply_to_flat_csr(&self, other: &SparseCSR) -> (Vec<usize>, Vec<f32>) {
         assert_eq!(self.ncols, other.nrows);
         let target_cols = other.ncols;
 
         let mut result_flat_indices = Vec::new();
         let mut result_values = Vec::new();
 
-        for i in 0..self.nrows {
-            let (r_start, r_end) = self.get_row_range(i);
-            if r_start == r_end {
-                continue;
-            }
-            for j in 0..other.ncols {
-                let (c_start, c_end) = other.get_column_range(j);
-                let mut acc = 0.0;
+        let mut acc_row = vec![0.0; target_cols];
+        let mut seen_cols: Vec<usize> = Vec::new();
 
-                // two pointers - rowrange and colrange are sorted
-                let mut r_ptr = r_start;
-                let mut c_ptr = c_start;
+        for row in 0..self.nrows {
+            let (r_start, r_end) = self.get_row_range(row);
+            for r_ptr in r_start..r_end {
+                let a_col = self.colind[r_ptr];
+                let a_val = self.values[r_ptr];
+                let (b_r_start, b_r_end) = other.get_row_range(a_col);
 
-                while r_ptr < r_end && c_ptr < c_end {
-                    let rowind = other.rowind[c_ptr];
-                    let colind = self.colind[r_ptr];
-                    if rowind == colind {
-                        acc += self.values[r_ptr] * other.values[c_ptr];
-                        r_ptr += 1;
-                        c_ptr += 1;
-                    } else if rowind < colind {
-                        c_ptr += 1;
-                    } else {
-                        r_ptr += 1;
+                for b_r_ptr in b_r_start..b_r_end {
+                    let b_col = other.colind[b_r_ptr];
+                    let other_value = other.values[b_r_ptr];
+
+                    if acc_row[b_col] == 0.0 {
+                        seen_cols.push(b_col);
                     }
+
+                    acc_row[b_col] += a_val * other_value;
                 }
-                result_flat_indices.push(i * target_cols + j);
-                result_values.push(acc);
             }
+
+            for col in &seen_cols {
+                result_flat_indices.push(row * target_cols + col);
+                result_values.push(acc_row[*col]);
+                acc_row[*col] = 0.0;
+            }
+
+            seen_cols.clear();
         }
+        
+        // println!("result_flat_indices: {:?}", result_flat_indices);
+        // println!("result_values: {:?}", result_values);
+        
 
         (result_flat_indices, result_values)
     }
-    pub fn multiply_csc(&self, other: &SparseCSC) -> SparseCSC {
-        let (flat_indices, values) = self.multiply_to_flat_csc(other);
-        SparseCSC::from_flat_indices(self.nrows, other.ncols, flat_indices, values)
+
+    pub fn multiply_csr(&self, other: &SparseCSR) -> SparseCSR {
+        let (flat_indices, values) = self.multiply_to_flat_csr(other);
+        SparseCSR::from_flat_indices(self.nrows, other.ncols, flat_indices, values)
     }
+
 }

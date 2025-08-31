@@ -44,22 +44,39 @@ fn main() {
     let n = 100000;
     let density = 0.0001;
 
-    // let mut start = Instant::now();
-    // let mat = SparseCOO::random(n, n, density);
-    // let mat2 = SparseCOO::random(n, n, density);
-    // println!(
-    //     "Instantiated matrices in {:?} nnz {}",
-    //     start.elapsed(),
-    //     mat.nnz()
-    // );
+    let mut start = Instant::now();
+    let mat = SparseCOO::random(n, n, density);
+    let mat2 = SparseCOO::random(n, n, density);
+    println!(
+        "Instantiated matrices in {:?} nnz {}",
+        start.elapsed(),
+        mat.nnz()
+    );
 
-    // start = Instant::now();
-    // let result2 = mat.multiply(&mat2);
-    // println!(
-    //     "Multiplied matrices COO in {:?} nnz {}",
-    //     start.elapsed(),
-    //     result2.nnz()
-    // );
+    start = Instant::now();
+    let result2 = mat.multiply(&mat2);
+    println!(
+        "Multiplied matrices COO in {:?} nnz {}",
+        start.elapsed(),
+        result2.nnz()
+    );
+
+    let mut start = Instant::now();
+    let mat = SparseCSR::random(n, n, density);
+    let mat2 = SparseCSR::random(n, n, density);
+    println!(
+        "CSR-CSR Instantiated matrices in {:?} nnz {}",
+        start.elapsed(),
+        mat.nnz()
+    );
+
+    start = Instant::now();
+    let result2 = mat.multiply_to_flat_csr(&mat2);
+    println!(
+        "Multiplied matrices CSR-CSR in {:?} nnz {}",
+        start.elapsed(),
+        result2.0.len()
+    );
 
     // start = Instant::now();
     // let result = mat.multiply(&mat2);
@@ -85,9 +102,9 @@ fn main() {
     ];
 
     let mut mat5 = SparseCSR::from_dense(dense.clone());
-    let mat6 = SparseCSC::from_dense(dense.clone());
+    let mat6 = SparseCSR::from_dense(dense.clone());
 
-    let (indexes, values) = mat5.multiply_to_flat_csc(&mat6);
+    let (indexes, values) = mat5.multiply_to_flat_csr(&mat6);
     let res = SparseCOO::from_flat_indices(3, 3, indexes, values);
 
     print_dense(res.to_dense());

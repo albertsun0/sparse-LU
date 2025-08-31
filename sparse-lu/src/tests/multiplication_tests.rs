@@ -7,10 +7,10 @@ use crate::tests::test_utils::{
 
 fn test_sparse_csr_csc_multiplication(dense_a: Vec<Vec<f32>>, dense_b: Vec<Vec<f32>>) {
     let sparse_a = SparseCSR::from_dense(dense_a.clone());
-    let sparse_b = SparseCSC::from_dense(dense_b.clone());
+    let sparse_b = SparseCSR::from_dense(dense_b.clone());
 
     // Multiply sparse matrices
-    let sparse_result = sparse_a.multiply_csc(&sparse_b);
+    let sparse_result = sparse_a.multiply_csr(&sparse_b);
 
     // Multiply dense matrices for verification
     let dense_result = dense_matrix_multiply(&dense_a, &dense_b);
